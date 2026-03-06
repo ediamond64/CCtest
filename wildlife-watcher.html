@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>David's Wildlife Expedition</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  background: #1a1a2e;
+  color: #fff;
+}
+
+/* Screens */
+.screen { display: none; width: 100%; height: 100vh; position: absolute; top: 0; left: 0; }
+.screen.active { display: flex; }
+
+/* Loading Screen */
+#loading-screen {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0f3443, #34e89e);
+  gap: 20px;
+  text-align: center;
+}
+#loading-screen h2 { font-size: 1.5rem; }
+.loading-bar-container {
+  width: 260px; height: 8px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.loading-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #f5af19, #f12711);
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+.loading-text { font-size: 0.85rem; opacity: 0.7; }
+
+/* Title Screen */
+#title-screen {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0f3443, #34e89e);
+  gap: 24px;
+  text-align: center;
+  padding: 20px;
+}
+#title-screen h1 {
+  font-size: 3rem;
+  text-shadow: 2px 4px 8px rgba(0,0,0,0.4);
+  letter-spacing: 2px;
+}
+#title-screen .subtitle {
+  font-size: 1.1rem;
+  opacity: 0.85;
+  max-width: 460px;
+  line-height: 1.5;
+}
+.title-photo-strip {
+  display: flex;
+  gap: 10px;
+  margin: 10px 0;
+}
+.title-photo-strip img {
+  width: 80px; height: 80px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 3px solid rgba(255,255,255,0.3);
+}
+.david-intro {
+  font-size: 0.95rem;
+  opacity: 0.75;
+  font-style: italic;
+  max-width: 400px;
+}
+
+.btn {
+  padding: 14px 36px;
+  font-size: 1.1rem;
+  border: none;
+  border-radius: 30px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: transform 0.15s, box-shadow 0.15s;
+  color: #fff;
+}
+.btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
+.btn-primary { background: linear-gradient(135deg, #f5af19, #f12711); }
+.btn-secondary { background: linear-gradient(135deg, #667eea, #764ba2); }
+.btn-back { background: rgba(255,255,255,0.15); padding: 10px 24px; font-size: 0.95rem; }
+
+/* Header bar */
+.header {
+  position: absolute; top: 0; left: 0; right: 0;
+  padding: 12px 20px;
+  display: flex; justify-content: space-between; align-items: center;
+  background: rgba(0,0,0,0.3);
+  z-index: 10;
+  backdrop-filter: blur(4px);
+}
+.header .points-display { font-size: 1rem; font-weight: 600; }
+
+/* Habitat Select */
+#habitat-screen {
+  flex-direction: column;
+  align-items: center;
+  background: linear-gradient(135deg, #0f3443, #34e89e);
+  padding-top: 70px;
+  overflow-y: auto;
+}
+#habitat-screen h2 { font-size: 1.8rem; margin: 20px 0 10px; }
+.habitat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  padding: 20px;
+  width: 100%;
+  max-width: 940px;
+}
+.habitat-card {
+  border-radius: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+  overflow: hidden;
+  min-height: 180px;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  padding: 20px;
+}
+.habitat-card .habitat-bg-img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+.habitat-card .habitat-overlay {
+  position: absolute; inset: 0;
+  z-index: 1;
+}
+.habitat-card h3, .habitat-card .lock-info, .habitat-card .completion {
+  position: relative; z-index: 2;
+}
+.habitat-card:hover { transform: translateY(-4px); box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
+.habitat-card.locked { cursor: not-allowed; }
+.habitat-card.locked .habitat-bg-img { filter: grayscale(0.8) brightness(0.5); }
+.habitat-card.locked:hover { transform: none; box-shadow: none; }
+.habitat-card h3 { font-size: 1.3rem; margin-bottom: 4px; text-shadow: 0 2px 8px rgba(0,0,0,0.7); }
+.habitat-card .lock-info { font-size: 0.85rem; opacity: 0.9; margin-top: 4px; text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
+.habitat-card .completion { font-size: 0.8rem; opacity: 0.85; margin-top: 4px; text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
+
+/* Exploration Screen */
+#explore-screen {
+  flex-direction: column;
+  position: relative;
+}
+.explore-area {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  cursor: crosshair;
+}
+.explore-area .explore-bg-img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+.explore-area .explore-bg-overlay {
+  position: absolute; inset: 0;
+  z-index: 1;
+}
+.hotspot {
+  position: absolute;
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+  transition: transform 0.2s;
+  z-index: 5;
+}
+.hotspot::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
+  animation: shimmer 2.5s ease-in-out infinite;
+}
+.hotspot:hover { transform: translate(-50%, -50%) scale(1.2); }
+.hotspot:hover::before { background: radial-gradient(circle, rgba(255,255,255,0.5) 0%, transparent 70%); }
+
+@keyframes shimmer {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+.hotspot.found::before { background: radial-gradient(circle, rgba(255,255,100,0.3) 0%, transparent 70%); }
+.hotspot.found::after {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.5);
+  background: rgba(76,175,80,0.25);
+}
+
+/* Camera viewfinder overlay */
+.viewfinder-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  z-index: 100;
+  align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.9);
+}
+.viewfinder-overlay.active { display: flex; }
+.viewfinder-frame {
+  width: 320px; height: 320px;
+  border-radius: 16px;
+  border: 3px solid rgba(255,255,255,0.6);
+  box-shadow: 0 0 0 3px rgba(0,0,0,0.5), 0 0 80px rgba(0,0,0,0.6) inset;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  animation: viewfinderZoom 0.35s ease-out;
+  position: relative;
+  overflow: hidden;
+  background: #111;
+}
+/* Viewfinder crosshair corners */
+.viewfinder-frame::before {
+  content: '';
+  position: absolute; inset: 12px;
+  border: 1.5px solid rgba(255,255,255,0.25);
+  border-radius: 4px;
+  z-index: 3;
+  pointer-events: none;
+}
+.viewfinder-frame::after {
+  content: 'REC';
+  position: absolute; top: 18px; right: 20px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #f44;
+  letter-spacing: 1px;
+  z-index: 3;
+  animation: recBlink 1s infinite;
+}
+@keyframes recBlink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
+@keyframes viewfinderZoom {
+  0% { transform: scale(0.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.viewfinder-frame .vf-bg {
+  position: absolute; inset: 0;
+  border-radius: 13px;
+}
+.viewfinder-frame .vf-bg img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  border-radius: 13px;
+}
+.viewfinder-frame .vf-content {
+  position: relative; z-index: 2;
+  text-align: center;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+}
+.vf-content .species-photo {
+  width: 140px; height: 140px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 3px solid rgba(255,255,255,0.4);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+.vf-content .species-name { font-size: 1.1rem; font-weight: 700; margin-top: 10px; }
+.vf-content .empty-msg { font-size: 1rem; opacity: 0.8; padding: 0 24px; }
+.vf-content .empty-msg .camera-icon { font-size: 2.5rem; display: block; margin-bottom: 10px; opacity: 0.5; }
+
+/* Discovery Modal */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  z-index: 200;
+  align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.7);
+  padding: 20px;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: linear-gradient(145deg, #1e293b, #334155);
+  border-radius: 20px;
+  padding: 30px;
+  max-width: 440px;
+  width: 100%;
+  text-align: center;
+  animation: modalIn 0.3s ease-out;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+@keyframes modalIn {
+  0% { transform: translateY(30px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+.modal .discovery-photo {
+  width: 180px; height: 180px;
+  border-radius: 16px;
+  object-fit: cover;
+  border: 4px solid rgba(255,255,255,0.15);
+  box-shadow: 0 6px 30px rgba(0,0,0,0.4);
+  margin: 0 auto;
+  display: block;
+}
+.modal .discovery-photo-placeholder {
+  width: 180px; height: 180px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.08);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto;
+  font-size: 3rem;
+}
+.modal h3 { font-size: 1.5rem; margin: 12px 0 4px; }
+.modal .species-type { font-size: 0.85rem; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px; }
+.modal .rarity-badge {
+  display: inline-block;
+  padding: 3px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin: 10px 0;
+}
+.rarity-common { background: #4ade80; color: #052e16; }
+.rarity-uncommon { background: #60a5fa; color: #172554; }
+.rarity-rare { background: #f59e0b; color: #451a03; }
+.modal .points-earned { font-size: 1.3rem; font-weight: 700; color: #fbbf24; margin: 8px 0; }
+.modal .facts { text-align: left; margin: 16px 0; }
+.modal .facts p { font-size: 0.9rem; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.1); line-height: 1.4; }
+.modal .already-found { color: #94a3b8; font-size: 0.9rem; margin: 10px 0; }
+.modal .btn { margin-top: 10px; }
+
+/* Photo Album */
+#album-screen {
+  flex-direction: column;
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  padding-top: 70px;
+  overflow-y: auto;
+}
+#album-screen h2 { text-align: center; font-size: 1.8rem; margin: 20px 0 5px; }
+.album-stats { text-align: center; opacity: 0.7; font-size: 0.9rem; margin-bottom: 15px; }
+.album-habitat-section {
+  padding: 10px 20px;
+  max-width: 940px;
+  width: 100%;
+  margin: 0 auto;
+}
+.album-habitat-section h3 {
+  font-size: 1.1rem;
+  margin: 12px 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+}
+.album-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+.album-card {
+  background: rgba(255,255,255,0.07);
+  border-radius: 12px;
+  padding: 10px;
+  text-align: center;
+  transition: transform 0.15s;
+  cursor: pointer;
+  overflow: hidden;
+}
+.album-card:hover { transform: translateY(-2px); }
+.album-card .album-photo {
+  width: 100%; height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+}
+.album-card .album-photo-placeholder {
+  width: 100%; height: 100px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.05);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem;
+  opacity: 0.3;
+}
+.album-card .album-name { font-size: 0.8rem; margin-top: 8px; font-weight: 600; }
+.album-card.undiscovered { opacity: 0.35; cursor: default; }
+.album-card.undiscovered:hover { transform: none; }
+.album-card.undiscovered .album-photo { filter: brightness(0.15) grayscale(1); }
+.album-card.undiscovered .album-name { font-style: italic; }
+
+/* Habitat completion toast */
+.toast {
+  position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+  background: linear-gradient(135deg, #f59e0b, #ef4444);
+  padding: 14px 28px;
+  border-radius: 30px;
+  font-weight: 700;
+  font-size: 1rem;
+  z-index: 300;
+  animation: toastIn 0.3s ease-out, toastOut 0.3s ease-in 2.5s forwards;
+  white-space: nowrap;
+}
+@keyframes toastIn { 0% { opacity: 0; transform: translateX(-50%) translateY(20px); } 100% { opacity: 1; transform: translateX(-50%) translateY(0); } }
+@keyframes toastOut { 0% { opacity: 1; } 100% { opacity: 0; } }
+
+/* Explore footer */
+.explore-footer {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 12px 20px;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+  display: flex; justify-content: space-between; align-items: center;
+  z-index: 10;
+}
+.explore-footer .habitat-name { font-weight: 600; text-shadow: 0 1px 4px rgba(0,0,0,0.5); }
+.explore-footer .explore-hint { opacity: 0.7; font-size: 0.85rem; }
+
+/* Responsive */
+@media (max-width: 600px) {
+  #title-screen h1 { font-size: 2.2rem; }
+  .habitat-grid { grid-template-columns: 1fr; padding: 12px; }
+  .viewfinder-frame { width: 260px; height: 260px; }
+  .modal { padding: 20px; margin: 10px; }
+  .album-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+  .title-photo-strip img { width: 60px; height: 60px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Loading Screen -->
+<div id="loading-screen" class="screen active">
+  <h2>Loading David's Expedition...</h2>
+  <div class="loading-bar-container"><div class="loading-bar" id="loading-bar"></div></div>
+  <div class="loading-text" id="loading-text">Fetching wildlife photographs...</div>
+</div>
+
+<!-- Title Screen -->
+<div id="title-screen" class="screen">
+  <h1>David's Wildlife Expedition</h1>
+  <div class="title-photo-strip" id="title-photo-strip"></div>
+  <p class="subtitle">Join David, a passionate wildlife photographer, as he treks across the globe to find and photograph the world's most incredible species.</p>
+  <p class="david-intro">"Every creature tells a story. My camera is how I listen." — David</p>
+  <button class="btn btn-primary" onclick="showScreen('habitat-screen')">Start Expedition</button>
+</div>
+
+<!-- Habitat Select -->
+<div id="habitat-screen" class="screen">
+  <div class="header">
+    <button class="btn btn-back" onclick="showScreen('title-screen')">Home</button>
+    <span class="points-display" id="habitat-points">0 pts</span>
+    <button class="btn btn-back" onclick="showScreen('album-screen')">Photo Album</button>
+  </div>
+  <h2>Where should David explore?</h2>
+  <div class="habitat-grid" id="habitat-grid"></div>
+</div>
+
+<!-- Exploration Screen -->
+<div id="explore-screen" class="screen">
+  <div class="header">
+    <button class="btn btn-back" onclick="showScreen('habitat-screen')">Back</button>
+    <span class="points-display" id="explore-points">0 pts</span>
+    <button class="btn btn-back" onclick="showScreen('album-screen')">Photo Album</button>
+  </div>
+  <div class="explore-area" id="explore-area"></div>
+  <div class="explore-footer">
+    <span class="habitat-name" id="explore-habitat-name"></span>
+    <span class="explore-hint">Click the shimmering spots to photograph wildlife!</span>
+  </div>
+</div>
+
+<!-- Camera Viewfinder Overlay -->
+<div class="viewfinder-overlay" id="viewfinder-overlay">
+  <div class="viewfinder-frame">
+    <div class="vf-bg" id="vf-bg"></div>
+    <div class="vf-content" id="vf-content"></div>
+  </div>
+</div>
+
+<!-- Discovery Modal -->
+<div class="modal-overlay" id="discovery-modal">
+  <div class="modal" id="modal-content"></div>
+</div>
+
+<!-- Photo Album -->
+<div id="album-screen" class="screen">
+  <div class="header">
+    <button class="btn btn-back" onclick="showScreen('habitat-screen')">Back</button>
+    <span class="points-display" id="album-points">0 pts</span>
+  </div>
+  <h2>David's Photo Album</h2>
+  <div class="album-stats" id="album-stats"></div>
+  <div id="album-content"></div>
+</div>
+
+<script>
+// ==================== GAME DATA ====================
+const HABITATS = [
+  {
+    id: 'temperate-forest',
+    name: 'Temperate Forest',
+    unlock: 0,
+    bg: 'linear-gradient(180deg, #2d5016 0%, #4a7c23 30%, #3b6b1a 60%, #2a4d12 100%)',
+    wiki: 'Temperate_broadleaf_and_mixed_forest',
+    species: [
+      { name: 'Red Cardinal', type: 'Bird', wiki: 'Northern_cardinal', rarity: 'common', points: 10,
+        facts: ['Males are bright red to attract mates, while females are brownish.', 'They don\'t migrate and can be seen year-round.', 'Cardinals are one of few female songbirds that sing.'] },
+      { name: 'White-tailed Deer', type: 'Mammal', wiki: 'White-tailed_deer', rarity: 'common', points: 10,
+        facts: ['They can run up to 30 mph and jump 10 feet high.', 'Fawns are born with white spots for camouflage.', 'Their white tail flashes as a warning signal to other deer.'] },
+      { name: 'Eastern Box Turtle', type: 'Reptile', wiki: 'Eastern_box_turtle', rarity: 'uncommon', points: 20,
+        facts: ['They can live over 100 years in the wild.', 'They can completely close their shell like a box \u2014 hence the name.', 'Box turtles return to the same small home range their entire lives.'] },
+      { name: 'Red Fox', type: 'Mammal', wiki: 'Red_fox', rarity: 'uncommon', points: 20,
+        facts: ['Red foxes can hear a mouse under 3 feet of snow.', 'They use Earth\'s magnetic field to hunt \u2014 pouncing northeast for best accuracy.', 'Fox cubs are born blind and don\'t open their eyes for 12\u201314 days.'] },
+      { name: 'Sugar Maple', type: 'Plant', wiki: 'Sugar_maple', rarity: 'common', points: 10,
+        facts: ['A single sugar maple can produce 12 gallons of sap per season.', 'It takes 40 gallons of sap to make 1 gallon of maple syrup.', 'Sugar maples can live for 300\u2013400 years.'] },
+      { name: 'Monarch Butterfly', type: 'Insect', wiki: 'Monarch_butterfly', rarity: 'rare', points: 30,
+        facts: ['They migrate up to 3,000 miles from Canada to Mexico each year.', 'Monarchs are toxic to predators because they eat milkweed as caterpillars.', 'They navigate using a sun compass in their brain and antennae.'] }
+    ]
+  },
+  {
+    id: 'coral-reef',
+    name: 'Coral Reef',
+    unlock: 50,
+    bg: 'linear-gradient(180deg, #0077b6 0%, #0096c7 30%, #00b4d8 60%, #023e8a 100%)',
+    wiki: 'Coral_reef',
+    species: [
+      { name: 'Clownfish', type: 'Fish', wiki: 'Clownfish', rarity: 'common', points: 10,
+        facts: ['All clownfish are born male \u2014 dominant ones become female.', 'They live in symbiosis with anemones, immune to their stings.', 'A clownfish rarely ventures more than a few inches from its anemone.'] },
+      { name: 'Sea Turtle', type: 'Reptile', wiki: 'Green_sea_turtle', rarity: 'uncommon', points: 20,
+        facts: ['Sea turtles can hold their breath for up to 5 hours while sleeping.', 'They return to the exact beach where they were born to lay eggs.', 'Sea turtles have existed for over 100 million years.'] },
+      { name: 'Manta Ray', type: 'Fish', wiki: 'Manta_ray', rarity: 'rare', points: 30,
+        facts: ['Manta rays have the largest brain-to-body ratio of any fish.', 'They can have a wingspan of up to 23 feet.', 'Each manta ray has a unique spot pattern, like a fingerprint.'] },
+      { name: 'Blue Tang', type: 'Fish', wiki: 'Paracanthurus', rarity: 'common', points: 10,
+        facts: ['They can make themselves semi-transparent to evade predators.', 'Blue tangs are surgeonfish \u2014 they have razor-sharp spines near their tails.', 'Juveniles are bright yellow and turn blue as they mature.'] },
+      { name: 'Brain Coral', type: 'Coral', wiki: 'Brain_coral', rarity: 'uncommon', points: 20,
+        facts: ['Brain corals can live for over 900 years.', 'They grow less than 1 inch per year.', 'Each groove in a brain coral contains hundreds of tiny polyps.'] },
+      { name: 'Giant Clam', type: 'Mollusk', wiki: 'Giant_clam', rarity: 'rare', points: 30,
+        facts: ['Giant clams can weigh over 500 pounds and reach 4 feet across.', 'They get nutrients from algae living inside their tissues.', 'Once they settle on a reef, they never move again.'] }
+    ]
+  },
+  {
+    id: 'african-savanna',
+    name: 'African Savanna',
+    unlock: 120,
+    bg: 'linear-gradient(180deg, #f4a460 0%, #daa520 30%, #cd853f 60%, #8b7355 100%)',
+    wiki: 'Savanna',
+    species: [
+      { name: 'Lilac-breasted Roller', type: 'Bird', wiki: 'Lilac-breasted_roller', rarity: 'uncommon', points: 20,
+        facts: ['They have 8 different colors in their plumage.', 'Males perform dramatic rolling dives during courtship \u2014 hence the name.', 'They are the national bird of Kenya.'] },
+      { name: 'African Elephant', type: 'Mammal', wiki: 'African_elephant', rarity: 'uncommon', points: 20,
+        facts: ['They can communicate using infrasound that travels miles through the ground.', 'An elephant\'s brain weighs about 11 pounds \u2014 the largest of any land animal.', 'They mourn their dead and revisit the bones of deceased family members.'] },
+      { name: 'Giraffe', type: 'Mammal', wiki: 'Giraffe', rarity: 'common', points: 10,
+        facts: ['No two giraffes have the same spot pattern.', 'Their tongues are 18\u201320 inches long and dark purple to prevent sunburn.', 'Giraffes only need 30 minutes of sleep per day.'] },
+      { name: 'Baobab Tree', type: 'Plant', wiki: 'Adansonia', rarity: 'rare', points: 30,
+        facts: ['Baobab trees can store up to 32,000 gallons of water in their trunk.', 'Some baobabs are over 2,000 years old.', 'They are called \u201cupside-down trees\u201d because their branches look like roots.'] },
+      { name: 'Cheetah', type: 'Mammal', wiki: 'Cheetah', rarity: 'rare', points: 30,
+        facts: ['Cheetahs can accelerate from 0 to 60 mph in just 3 seconds.', 'They are the only big cats that can\'t roar \u2014 they chirp and purr instead.', 'Their claws don\'t fully retract, giving them grip like cleats.'] },
+      { name: 'Dung Beetle', type: 'Insect', wiki: 'Dung_beetle', rarity: 'common', points: 10,
+        facts: ['They navigate by the Milky Way \u2014 the first known animal to do so.', 'Dung beetles can bury 250 times their own weight in dung per night.', 'They are found on every continent except Antarctica.'] }
+    ]
+  },
+  {
+    id: 'tropical-rainforest',
+    name: 'Tropical Rainforest',
+    unlock: 200,
+    bg: 'linear-gradient(180deg, #006400 0%, #228b22 30%, #008000 50%, #004d00 100%)',
+    wiki: 'Tropical_rainforest',
+    species: [
+      { name: 'Toucan', type: 'Bird', wiki: 'Toucan', rarity: 'common', points: 10,
+        facts: ['Their bill can be one-third of their total body length.', 'The large bill helps regulate body temperature by releasing heat.', 'Toucans sleep by tucking their bill over their back and folding their tail over their head.'] },
+      { name: 'Poison Dart Frog', type: 'Amphibian', wiki: 'Poison_dart_frog', rarity: 'uncommon', points: 20,
+        facts: ['One golden poison frog has enough toxin to kill 10 grown men.', 'Their bright colors warn predators they are poisonous \u2014 this is called aposematism.', 'In captivity, they lose their toxicity because it comes from their wild diet.'] },
+      { name: 'Jaguar', type: 'Mammal', wiki: 'Jaguar', rarity: 'rare', points: 30,
+        facts: ['Jaguars have the strongest bite force of any big cat \u2014 they can crack turtle shells.', 'Unlike most cats, jaguars love water and are excellent swimmers.', 'The word \u201cjaguar\u201d comes from a Native American word meaning \u201che who kills with one leap.\u201d'] },
+      { name: 'Orchid', type: 'Plant', wiki: 'Orchidaceae', rarity: 'uncommon', points: 20,
+        facts: ['There are over 25,000 species of orchids \u2014 more than any other plant family.', 'Some orchids mimic female insects to trick males into pollinating them.', 'Vanilla comes from the seed pod of a type of orchid.'] },
+      { name: 'Howler Monkey', type: 'Mammal', wiki: 'Howler_monkey', rarity: 'common', points: 10,
+        facts: ['Their howls can be heard from 3 miles away \u2014 the loudest land animal.', 'They spend up to 80% of their time resting to conserve energy.', 'Their prehensile tail acts as a fifth limb and can support their full body weight.'] },
+      { name: 'Blue Morpho Butterfly', type: 'Insect', wiki: 'Morpho_menelaus', rarity: 'rare', points: 30,
+        facts: ['Their wings aren\'t actually blue \u2014 microscopic scales reflect light to create the color.', 'When they close their wings, the brown underside helps them disappear in the forest.', 'Their wingspan can reach up to 8 inches.'] }
+    ]
+  },
+  {
+    id: 'arctic-tundra',
+    name: 'Arctic Tundra',
+    unlock: 300,
+    bg: 'linear-gradient(180deg, #87ceeb 0%, #b0e0e6 30%, #e0f0ff 60%, #c8dce8 100%)',
+    wiki: 'Tundra',
+    species: [
+      { name: 'Snowy Owl', type: 'Bird', wiki: 'Snowy_owl', rarity: 'uncommon', points: 20,
+        facts: ['Unlike most owls, snowy owls are diurnal \u2014 they hunt during the day.', 'Their feathers cover even their feet to insulate against extreme cold.', 'A snowy owl can eat up to 1,600 lemmings per year.'] },
+      { name: 'Arctic Fox', type: 'Mammal', wiki: 'Arctic_fox', rarity: 'common', points: 10,
+        facts: ['Their fur changes from white in winter to brown in summer.', 'They can survive temperatures as low as \u221258\u00b0F (\u221250\u00b0C).', 'Arctic foxes follow polar bears to scavenge leftovers from their kills.'] },
+      { name: 'Polar Bear', type: 'Mammal', wiki: 'Polar_bear', rarity: 'rare', points: 30,
+        facts: ['Polar bear fur is actually transparent \u2014 their skin underneath is black.', 'They can swim for over 60 miles without resting.', 'Their sense of smell can detect a seal from 20 miles away.'] },
+      { name: 'Narwhal', type: 'Mammal', wiki: 'Narwhal', rarity: 'rare', points: 30,
+        facts: ['The narwhal\'s \u201chorn\u201d is actually a spiral tusk that can grow up to 10 feet long.', 'It contains millions of nerve endings and is used to sense changes in water.', 'Narwhals can dive to depths of nearly 5,000 feet.'] },
+      { name: 'Arctic Willow', type: 'Plant', wiki: 'Salix_arctica', rarity: 'common', points: 10,
+        facts: ['It\'s one of the smallest trees in the world \u2014 growing only 1\u20136 inches tall.', 'Arctic willows grow flat along the ground to avoid freezing winds.', 'Indigenous peoples used it as a source of vitamin C.'] },
+      { name: 'Puffin', type: 'Bird', wiki: 'Atlantic_puffin', rarity: 'uncommon', points: 20,
+        facts: ['Puffins can carry 10\u201312 fish in their beak at once thanks to their spiny tongue.', 'They flap their wings up to 400 times per minute during flight.', 'Puffins mate for life and return to the same burrow each year.'] }
+    ]
+  }
+];
+
+// ==================== IMAGE CACHE ====================
+const imageCache = {}; // wiki title -> image URL
+
+async function fetchWikiImage(wikiTitle) {
+  if (imageCache[wikiTitle]) return imageCache[wikiTitle];
+  try {
+    const resp = await fetch(
+      'https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(wikiTitle)
+    );
+    if (!resp.ok) throw new Error('Not found');
+    const data = await resp.json();
+    const url = (data.originalimage && data.originalimage.source)
+      || (data.thumbnail && data.thumbnail.source)
+      || null;
+    if (url) imageCache[wikiTitle] = url;
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+async function preloadAllImages(progressCallback) {
+  const tasks = [];
+  // Habitat images
+  HABITATS.forEach(h => tasks.push({ wiki: h.wiki, label: h.name }));
+  // Species images
+  HABITATS.forEach(h => h.species.forEach(s => tasks.push({ wiki: s.wiki, label: s.name })));
+
+  let done = 0;
+  const total = tasks.length;
+
+  const promises = tasks.map(async (t) => {
+    await fetchWikiImage(t.wiki);
+    done++;
+    progressCallback(done, total, t.label);
+  });
+
+  await Promise.all(promises);
+}
+
+function getImage(wikiTitle) {
+  return imageCache[wikiTitle] || null;
+}
+
+// ==================== GAME STATE ====================
+let gameState = {
+  points: 0,
+  discovered: [],
+  currentHabitat: null,
+  hotspots: []
+};
+
+function loadState() {
+  const saved = localStorage.getItem('wildlifeWatcher');
+  if (saved) {
+    const parsed = JSON.parse(saved);
+    gameState.points = parsed.points || 0;
+    gameState.discovered = parsed.discovered || [];
+  }
+}
+
+function saveState() {
+  localStorage.setItem('wildlifeWatcher', JSON.stringify({
+    points: gameState.points,
+    discovered: gameState.discovered
+  }));
+}
+
+function isDiscovered(habitatId, speciesName) {
+  return gameState.discovered.includes(habitatId + ':' + speciesName);
+}
+
+function discoverSpecies(habitatId, speciesName, points) {
+  const key = habitatId + ':' + speciesName;
+  if (!gameState.discovered.includes(key)) {
+    gameState.discovered.push(key);
+    gameState.points += points;
+    saveState();
+    return true;
+  }
+  return false;
+}
+
+// ==================== SCREEN MANAGEMENT ====================
+function showScreen(screenId) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(screenId).classList.add('active');
+  updatePointsDisplays();
+
+  if (screenId === 'habitat-screen') renderHabitatGrid();
+  if (screenId === 'album-screen') renderAlbum();
+}
+
+function updatePointsDisplays() {
+  const txt = gameState.points + ' pts';
+  document.getElementById('habitat-points').textContent = txt;
+  document.getElementById('explore-points').textContent = txt;
+  document.getElementById('album-points').textContent = txt;
+}
+
+// ==================== HABITAT SELECT ====================
+function renderHabitatGrid() {
+  const grid = document.getElementById('habitat-grid');
+  grid.innerHTML = '';
+  HABITATS.forEach(h => {
+    const unlocked = gameState.points >= h.unlock;
+    const discovered = h.species.filter(s => isDiscovered(h.id, s.name)).length;
+    const card = document.createElement('div');
+    card.className = 'habitat-card' + (unlocked ? '' : ' locked');
+
+    const bgImg = getImage(h.wiki);
+    card.innerHTML = `
+      ${bgImg ? `<img class="habitat-bg-img" src="${bgImg}" alt="${h.name}">` : ''}
+      <div class="habitat-overlay" style="background: linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.65) 100%)"></div>
+      <h3>${h.name}</h3>
+      ${unlocked
+        ? `<div class="completion">${discovered}/${h.species.length} photographed</div>`
+        : `<div class="lock-info">Requires ${h.unlock} pts</div>`
+      }
+    `;
+    if (!bgImg) card.style.background = h.bg;
+    if (unlocked) card.onclick = () => startExploration(h.id);
+    grid.appendChild(card);
+  });
+}
+
+// ==================== EXPLORATION ====================
+function startExploration(habitatId) {
+  const habitat = HABITATS.find(h => h.id === habitatId);
+  gameState.currentHabitat = habitat;
+  document.getElementById('explore-habitat-name').textContent = habitat.name;
+
+  const area = document.getElementById('explore-area');
+  area.innerHTML = '';
+
+  // Habitat background photo
+  const bgImg = getImage(habitat.wiki);
+  if (bgImg) {
+    const img = document.createElement('img');
+    img.className = 'explore-bg-img';
+    img.src = bgImg;
+    img.alt = habitat.name;
+    area.appendChild(img);
+    const overlay = document.createElement('div');
+    overlay.className = 'explore-bg-overlay';
+    overlay.style.background = 'linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.25) 100%)';
+    area.appendChild(overlay);
+  } else {
+    area.style.background = habitat.bg;
+  }
+
+  // Generate hotspots
+  const allSpecies = [...habitat.species];
+  const numSpeciesSlots = Math.min(4 + Math.floor(Math.random() * 3), allSpecies.length);
+  const shuffled = allSpecies.sort(() => Math.random() - 0.5);
+  const appearing = shuffled.slice(0, numSpeciesSlots);
+
+  const totalHotspots = 8;
+  const hotspots = [];
+  const positions = generatePositions(totalHotspots);
+
+  for (let i = 0; i < totalHotspots; i++) {
+    const species = i < appearing.length ? appearing[i] : null;
+    hotspots.push({ species, pos: positions[i] });
+  }
+
+  hotspots.sort(() => Math.random() - 0.5);
+  gameState.hotspots = hotspots;
+
+  hotspots.forEach((hs, idx) => {
+    const el = document.createElement('div');
+    el.className = 'hotspot';
+    if (hs.species && isDiscovered(habitat.id, hs.species.name)) {
+      el.classList.add('found');
+    }
+    el.style.left = hs.pos.x + '%';
+    el.style.top = hs.pos.y + '%';
+    el.onclick = () => clickHotspot(idx, el);
+    area.appendChild(el);
+  });
+
+  showScreen('explore-screen');
+}
+
+function generatePositions(count) {
+  const positions = [];
+  const minDist = 12;
+  for (let i = 0; i < count; i++) {
+    let attempts = 0;
+    let pos;
+    do {
+      pos = { x: 10 + Math.random() * 80, y: 12 + Math.random() * 70 };
+      attempts++;
+    } while (attempts < 50 && positions.some(p =>
+      Math.hypot(p.x - pos.x, p.y - pos.y) < minDist
+    ));
+    positions.push(pos);
+  }
+  return positions;
+}
+
+function clickHotspot(idx, el) {
+  const hs = gameState.hotspots[idx];
+  const habitat = gameState.currentHabitat;
+  const overlay = document.getElementById('viewfinder-overlay');
+  const bg = document.getElementById('vf-bg');
+  const content = document.getElementById('vf-content');
+
+  overlay.classList.add('active');
+
+  if (!hs.species) {
+    bg.innerHTML = '';
+    bg.style.background = 'rgba(0,0,0,0.8)';
+    content.innerHTML = '<div class="empty-msg"><span class="camera-icon">&#128247;</span>Nothing in frame...<br>David moves on to another spot.</div>';
+    setTimeout(() => overlay.classList.remove('active'), 1400);
+  } else {
+    const photo = getImage(hs.species.wiki);
+    const alreadyFound = isDiscovered(habitat.id, hs.species.name);
+    bg.style.background = '';
+    bg.innerHTML = photo ? `<img src="${photo}" alt="${hs.species.name}">` : '';
+    if (!photo) bg.style.background = habitat.bg;
+    content.innerHTML = `
+      ${photo ? `<img class="species-photo" src="${photo}" alt="${hs.species.name}">` : ''}
+      <div class="species-name">${alreadyFound ? 'Already photographed!' : '*click* ' + hs.species.name + '!'}</div>
+    `;
+    setTimeout(() => {
+      overlay.classList.remove('active');
+      showDiscoveryModal(hs.species, alreadyFound);
+      if (!alreadyFound) el.classList.add('found');
+    }, 1200);
+  }
+}
+
+function speciesImgHtml(species, size, cssClass) {
+  const photo = getImage(species.wiki);
+  if (photo) {
+    return `<img class="${cssClass}" src="${photo}" alt="${species.name}" style="width:${size}px;height:${size}px;object-fit:cover;border-radius:16px;">`;
+  }
+  return `<div class="discovery-photo-placeholder" style="width:${size}px;height:${size}px;">${species.type === 'Bird' ? '&#128038;' : '&#128062;'}</div>`;
+}
+
+function showDiscoveryModal(species, alreadyFound) {
+  const habitat = gameState.currentHabitat;
+  const modal = document.getElementById('modal-content');
+  const rarityClass = 'rarity-' + species.rarity;
+  const isNew = !alreadyFound;
+  const photo = getImage(species.wiki);
+
+  let factsHtml = species.facts.map(f => `<p>&#8226; ${f}</p>`).join('');
+
+  modal.innerHTML = `
+    ${photo
+      ? `<img class="discovery-photo" src="${photo}" alt="${species.name}">`
+      : `<div class="discovery-photo-placeholder">&#128247;</div>`
+    }
+    <h3>${species.name}</h3>
+    <div class="species-type">${species.type}</div>
+    <span class="rarity-badge ${rarityClass}">${species.rarity}</span>
+    ${isNew ? `<div class="points-earned">+${species.points} pts!</div>` : '<div class="already-found">Already in David\'s album</div>'}
+    <div class="facts">${factsHtml}</div>
+    ${isNew
+      ? `<button class="btn btn-primary" onclick="addToAlbum('${habitat.id}','${species.name.replace(/'/g, "\\'")}',${species.points})">Save to Album</button>`
+      : `<button class="btn btn-secondary" onclick="closeModal()">Continue</button>`
+    }
+  `;
+  document.getElementById('discovery-modal').classList.add('active');
+}
+
+function addToAlbum(habitatId, speciesName, points) {
+  discoverSpecies(habitatId, speciesName, points);
+  closeModal();
+  updatePointsDisplays();
+
+  const habitat = HABITATS.find(h => h.id === habitatId);
+  const discovered = habitat.species.filter(s => isDiscovered(habitatId, s.name)).length;
+  if (discovered === habitat.species.length) {
+    showToast(habitat.name + ' \u2014 100% Complete! Great work, David!');
+  }
+}
+
+function closeModal() {
+  document.getElementById('discovery-modal').classList.remove('active');
+}
+
+function showToast(message) {
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
+
+// ==================== PHOTO ALBUM ====================
+function renderAlbum() {
+  const content = document.getElementById('album-content');
+  content.innerHTML = '';
+
+  const totalSpecies = HABITATS.reduce((sum, h) => sum + h.species.length, 0);
+  const totalDiscovered = gameState.discovered.length;
+  document.getElementById('album-stats').textContent =
+    totalDiscovered + '/' + totalSpecies + ' species photographed (' + Math.round(totalDiscovered / totalSpecies * 100) + '%)';
+
+  HABITATS.forEach(h => {
+    const section = document.createElement('div');
+    section.className = 'album-habitat-section';
+    const discovered = h.species.filter(s => isDiscovered(h.id, s.name)).length;
+    section.innerHTML = '<h3>' + h.name + ' \u2014 ' + discovered + '/' + h.species.length + '</h3>';
+    const grid = document.createElement('div');
+    grid.className = 'album-grid';
+
+    h.species.forEach(s => {
+      const found = isDiscovered(h.id, s.name);
+      const photo = getImage(s.wiki);
+      const card = document.createElement('div');
+      card.className = 'album-card' + (found ? '' : ' undiscovered');
+
+      if (photo) {
+        card.innerHTML = `
+          <img class="album-photo" src="${photo}" alt="${found ? s.name : '???'}">
+          <div class="album-name">${found ? s.name : '???'}</div>
+        `;
+      } else {
+        card.innerHTML = `
+          <div class="album-photo-placeholder">${found ? '&#128247;' : '?'}</div>
+          <div class="album-name">${found ? s.name : '???'}</div>
+        `;
+      }
+      if (found) {
+        card.onclick = () => showDiscoveryModal(s, true);
+      }
+      grid.appendChild(card);
+    });
+
+    section.appendChild(grid);
+    content.appendChild(section);
+  });
+}
+
+// ==================== TITLE SCREEN PHOTO STRIP ====================
+function renderTitlePhotoStrip() {
+  const strip = document.getElementById('title-photo-strip');
+  // Pick 5 random species with photos
+  const allSpecies = HABITATS.flatMap(h => h.species);
+  const withPhotos = allSpecies.filter(s => getImage(s.wiki));
+  const shuffled = withPhotos.sort(() => Math.random() - 0.5).slice(0, 5);
+  strip.innerHTML = shuffled.map(s => {
+    const url = getImage(s.wiki);
+    return `<img src="${url}" alt="${s.name}" title="${s.name}">`;
+  }).join('');
+}
+
+// ==================== INIT ====================
+loadState();
+
+(async function init() {
+  const bar = document.getElementById('loading-bar');
+  const text = document.getElementById('loading-text');
+
+  await preloadAllImages((done, total, label) => {
+    const pct = Math.round((done / total) * 100);
+    bar.style.width = pct + '%';
+    text.textContent = 'Loading ' + label + '...';
+  });
+
+  text.textContent = 'Ready!';
+  bar.style.width = '100%';
+
+  renderTitlePhotoStrip();
+  updatePointsDisplays();
+
+  setTimeout(() => showScreen('title-screen'), 400);
+})();
+</script>
+</body>
+</html>

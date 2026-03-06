@@ -28,7 +28,8 @@ Wildlife Watcher requires an internet connection on first load (Wikipedia API im
 - Wildlife Watcher species data includes a `wiki` field (Wikipedia article title) used for image lookups — keep this accurate when adding/editing species.
 - Game state is persisted via `localStorage`. Clearing storage resets progress.
 
-## GitHub
+## Git & GitHub Workflow
 
 - Remote: `origin` on github.com (ediamond64/CCtest)
 - Branch: `main`
+- **Every new project must get its own git repo.** Initialize git, make clean atomic commits with descriptive messages, and push to GitHub so there is always a saved remote copy and we can easily revert changes.
